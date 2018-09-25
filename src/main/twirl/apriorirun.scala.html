@@ -1,45 +1,47 @@
 @import Apriori.Types.{ItemSet, AprioriRun}
 @(aprioriRun: AprioriRun)
 @aprioriRun.runs.zipWithIndex.map { case (run, index) =>
-    \section{Frequent @(index + 1)-item sets}
+    \subsection{Frequent @(index + 1)-item sets}
 
-    %Frequent @index-item sets
-    \begin{tikzpicture}[remember picture]
-
-    \node (a) at (0,0){
+    \def\arraystretch{1.2}
     \begin{tabular}{l}
-    @run.start.sortWith(ItemSet.compare).map{ itemSet =>@itemSet\tikzmark{@itemSet-0}{(0,0)}\\
+    @run.start.sortWith(ItemSet.compare).map{ itemSet =>@itemSet\tikzmark{@itemSet-0}\\
     }
-    \end{tabular}};
-
+    \end{tabular}
+    \hfill
     %All possible candidates
-    \node[xshift=2cm] (b) at (a.east) {
     \begin{tabular}{l}
     @{run.generateCandidatesRun.prunedCandidates.sorted.map{ pit =>
-        Seq(s"\\tikzmark{${pit.itemSet.mkString}-1}{(10,0)}") ++ pit.itemSet.toSeq.map{it =>
+        Seq(s"\\tikzmark{${pit.itemSet.mkString}-1}") ++ pit.itemSet.toSeq.map{it =>
             if (pit.missingItems.contains(it)) {
-                s"\\textbf{$it}"
+                s"\\textbf{\\color{red}$it}"
             } else {
                 it
             }
-        } ++ Seq("\\\\\n")
+        } ++ Seq(s"\\tikzmark{${pit.itemSet.mkString}-2}\\\\\n")
     }}
-    \end{tabular}};
-
+    \end{tabular}
+    \hfill
     %Count occurrences in data set
-    \node[xshift=2cm] (c) at (b.east) {
     \begin{tabular}{ll}
-    @run.itemSetsFrequency.sorted.map{ it =>\tikzmark{@it.itemSet-2}{(0,0)}@it.itemSet & @{if (it.frequency < aprioriRun.threshold) s"\\textbf{${it.frequency}}" else it.frequency }\\
+    @run.itemSetsFrequency.sorted.map{ it =>\tikzmark{@it.itemSet-3}@it.itemSet & @{if (it.frequency < aprioriRun.threshold) s"\\textbf{\\color{red}${it.frequency}}" else it.frequency }\tikzmark{@it.itemSet-4}\\
     }
-    \end{tabular}};
-
+    \end{tabular}
+    \hfill
     %Frequent @index-item sets
-    \node[xshift=2cm] (d) at (c.east) {
     \begin{tabular}{l}
-    @run.frequentItemSets.sortWith(ItemSet.compare).map{ itemSet =>@itemSet\\}
-    \end{tabular}};
+    @run.frequentItemSets.sortWith(ItemSet.compare).map{ itemSet =>\tikzmark{@itemSet-5}@itemSet\\}
+    \end{tabular}
 
-    \draw[->](pic cs:A-0)--(pic cs:AB-1);
-
+    \begin{tikzpicture}[remember picture, overlay]
+    @run.generateCandidatesRun.allCandidates.map { it => @it.parents.map { p =>
+            \draw[->](pic cs:@p-0)--(pic cs:@it.itemSet-1);}}
+    @run.itemSetsFrequency.map(_.itemSet).map{ it =>
+            \draw[->](pic cs:@it-2)--(pic cs:@it-3);}
+    @run.frequentItemSets.map{ it =>
+            \draw[->](pic cs:@it-4)--(pic cs:@it-5);}
     \end{tikzpicture}
+
+    Frequent @(index + 1)-item sets: $\{@run.frequentItemSets.sortWith(ItemSet.compare).map(_.mkString).mkString(", ")\}$
 }
+
