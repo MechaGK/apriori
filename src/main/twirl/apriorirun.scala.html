@@ -4,35 +4,42 @@
     \section{Frequent @(index + 1)-item sets}
 
     %Frequent @index-item sets
+    \begin{tikzpicture}[remember picture]
+
+    \node (a) at (0,0){
     \begin{tabular}{l}
-    @run.start.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
-    \end{tabular}
-    \quad
+    @run.start.sortWith(ItemSet.compare).map{ itemSet =>@itemSet\tikzmark{@itemSet-0}{(0,0)}\\
+    }
+    \end{tabular}};
+
     %All possible candidates
+    \node[xshift=2cm] (b) at (a.east) {
     \begin{tabular}{l}
     @{run.generateCandidatesRun.prunedCandidates.sorted.map{ pit =>
-        pit.itemSet.toSeq.map{it =>
+        Seq(s"\\tikzmark{${pit.itemSet.mkString}-1}{(10,0)}") ++ pit.itemSet.toSeq.map{it =>
             if (pit.missingItems.contains(it)) {
                 s"\\textbf{$it}"
             } else {
                 it
             }
-        } ++ Seq(" \\\\\n")
+        } ++ Seq("\\\\\n")
     }}
-    \end{tabular}
-    \quad
-    %Candidates after pruning
-    \begin{tabular}{l}
-    @run.generateCandidatesRun.finalCandidates.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
-    \end{tabular}
-    \quad
+    \end{tabular}};
+
     %Count occurrences in data set
+    \node[xshift=2cm] (c) at (b.east) {
     \begin{tabular}{ll}
-    @run.itemSetsFrequency.sorted.map{ it => @it.itemSet & @{if (it.frequency < aprioriRun.threshold) s"\\textbf{${it.frequency}}" else it.frequency } \\}
-    \end{tabular}
-    \quad
+    @run.itemSetsFrequency.sorted.map{ it =>\tikzmark{@it.itemSet-2}{(0,0)}@it.itemSet & @{if (it.frequency < aprioriRun.threshold) s"\\textbf{${it.frequency}}" else it.frequency }\\
+    }
+    \end{tabular}};
+
     %Frequent @index-item sets
+    \node[xshift=2cm] (d) at (c.east) {
     \begin{tabular}{l}
-    @run.frequentItemSets.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
-    \end{tabular}
+    @run.frequentItemSets.sortWith(ItemSet.compare).map{ itemSet =>@itemSet\\}
+    \end{tabular}};
+
+    \draw[->](pic cs:A-0)--(pic cs:AB-1);
+
+    \end{tikzpicture}
 }

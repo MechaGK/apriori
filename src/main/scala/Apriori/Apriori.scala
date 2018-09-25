@@ -23,8 +23,8 @@ class Apriori[A: Ordering](val dataset: Dataset[Char]) {
     val frequentItems = counted.filter { case (_, count) => count >= threshold }.keys.map(ItemSet(_)).toSeq
 
     val baseStep: AprioriStep[Char] = AprioriStep.fromMap[Char](
-      start = Seq.empty,
-      GenerateCandidatesRun(Seq.empty, Seq.empty, Seq.empty),
+      start = frequentItems,
+      GenerateCandidatesRun(frequentItems.map(GeneratedItemSet(_, Seq.empty)), frequentItems.map(PrunedItemSet(_, Seq.empty)), frequentItems),
       counted.map { case (k, v) => (ItemSet(k), v) },
       frequentItems
     )
