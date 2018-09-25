@@ -1,0 +1,38 @@
+@import Apriori.Types.{ItemSet, AprioriRun}
+@(aprioriRun: AprioriRun)
+@aprioriRun.runs.zipWithIndex.map { case (run, index) =>
+    \section{Frequent @(index + 1)-item sets}
+
+    %Frequent @index-item sets
+    \begin{tabular}{l}
+    @run.start.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
+    \end{tabular}
+    \quad
+    %All possible candidates
+    \begin{tabular}{l}
+    @{run.generateCandidatesRun.prunedCandidates.sorted.map{ pit =>
+        pit.itemSet.toSeq.map{it =>
+            if (pit.missingItems.contains(it)) {
+                s"\\textbf{$it}"
+            } else {
+                it
+            }
+        } ++ Seq(" \\\\\n")
+    }}
+    \end{tabular}
+    \quad
+    %Candidates after pruning
+    \begin{tabular}{l}
+    @run.generateCandidatesRun.finalCandidates.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
+    \end{tabular}
+    \quad
+    %Count occurrences in data set
+    \begin{tabular}{ll}
+    @run.itemSetsFrequency.sorted.map{ it => @it.itemSet & @{if (it.frequency < aprioriRun.threshold) s"\\textbf{${it.frequency}}" else it.frequency } \\}
+    \end{tabular}
+    \quad
+    %Frequent @index-item sets
+    \begin{tabular}{l}
+    @run.frequentItemSets.sortWith(ItemSet.compare).map{ itemSet => @itemSet \\}
+    \end{tabular}
+}

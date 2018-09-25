@@ -1,8 +1,9 @@
 import Datasets.Datasets
-import Apriori.Apriori
+import Apriori._
 
 object Main extends App {
-  val apriori = new Apriori(Datasets.assignment1)
+  val apriori: Apriori[Char] = new Apriori(Datasets.assignment1)
+  val runs = apriori.run(2)
 
-  println(apriori.run(2))
+  println(html.apriorirun.render(runs))
 }

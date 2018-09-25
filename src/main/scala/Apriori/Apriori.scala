@@ -5,12 +5,12 @@ import Datasets.Dataset
 
 import scala.collection.SortedSet
 
-class Apriori[A: Ordering](val dataset: Dataset[A]) {
-  def run(threshold: Int): Seq[AprioriStep[A]] = {
+class Apriori[A: Ordering](val dataset: Dataset[Char]) {
+  def run(threshold: Int): AprioriRun = {
     val items = dataset.items
     val transactions = dataset.transactions
 
-    val counted = transactions.foldLeft(items.map(i => i -> 0).toMap: Map[A, Int]) { (map, transaction) =>
+    val counted = transactions.foldLeft(items.map(i => i -> 0).toMap: Map[Char, Int]) { (map, transaction) =>
       map.map { case kv@(key, value) =>
         if (transaction(key)) {
           (key, value + 1)
@@ -22,16 +22,19 @@ class Apriori[A: Ordering](val dataset: Dataset[A]) {
 
     val frequentItems = counted.filter { case (_, count) => count >= threshold }.keys.map(ItemSet(_)).toSeq
 
-    val baseStep: AprioriStep[A] = AprioriStep.fromMap[A](
+    val baseStep: AprioriStep[Char] = AprioriStep.fromMap[Char](
+      start = Seq.empty,
       GenerateCandidatesRun(Seq.empty, Seq.empty, Seq.empty),
       counted.map { case (k, v) => (ItemSet(k), v) },
       frequentItems
     )
 
-    runStep(Seq(baseStep), threshold)
+    AprioriRun(
+      runs = runStep(Seq(baseStep), threshold),
+      threshold = threshold)
   }
 
-  def tryJoin(a: ItemSet[A], b: ItemSet[A]): Option[GeneratedItemSet[A]] = {
+  def tryJoin(a: ItemSet[Char], b: ItemSet[Char]): Option[GeneratedItemSet] = {
     if (a == b) {
       None
     } else {
@@ -45,19 +48,18 @@ class Apriori[A: Ordering](val dataset: Dataset[A]) {
     }
   }
 
-  def getJoins(itemsets: Seq[ItemSet[A]]): Seq[GeneratedItemSet[A]] = itemsets.toList match {
+  def getJoins(itemsets: Seq[ItemSet[Char]]): Seq[GeneratedItemSet] = itemsets.toList match {
     case Nil => Seq.empty
     case _ :: Nil => Seq.empty
     case element :: sets => sets.flatMap(tryJoin(_, element)) ++ getJoins(sets)
   }
 
-  def generateCandidates(itemsets: Seq[ItemSet[A]]): GenerateCandidatesRun[A] = {
+  def generateCandidates(itemsets: Seq[ItemSet[Char]]): GenerateCandidatesRun[Char] = {
     val allCandidates = getJoins(itemsets)
     val prunedCandidates = allCandidates.map(_.itemSet).map(s => PrunedItemSet(
       itemSet = s,
-      missingItemSets = s.subsets(s.size - 1).filter(itemsets.contains(_)).toSeq)).filter(_.missingItemSets.isEmpty)
-    val finalCandidates = allCandidates.map(_.itemSet).diff(prunedCandidates.map(_.itemSet))
-
+      missingItemSets = s.subsets(s.size - 1).filterNot(itemsets.contains(_)).toSeq))
+    val finalCandidates = allCandidates.map(_.itemSet).diff(prunedCandidates.filter(_.missingItemSets.nonEmpty).map(_.itemSet))
     GenerateCandidatesRun(
       allCandidates = allCandidates,
       prunedCandidates = prunedCandidates,
@@ -65,7 +67,7 @@ class Apriori[A: Ordering](val dataset: Dataset[A]) {
     )
   }
 
-  def runStep(itemset: Seq[AprioriStep[A]], threshold: Int): Seq[AprioriStep[A]] = {
+  def runStep(itemset: Seq[AprioriStep[Char]], threshold: Int): Seq[AprioriStep[Char]] = {
     if (itemset.last.frequentItemSets.isEmpty) {
       itemset
     } else {
@@ -73,11 +75,11 @@ class Apriori[A: Ordering](val dataset: Dataset[A]) {
     }
   }
 
-  def apriori(itemset: Seq[SortedSet[A]], threshold: Int): AprioriStep[A] = {
+  def apriori(itemset: Seq[SortedSet[Char]], threshold: Int): AprioriStep[Char] = {
     val candidates = generateCandidates(itemset)
 
     val counted = dataset.transactions.foldLeft(
-      candidates.finalCandidates.map(s => s -> 0).toMap: Map[SortedSet[A], Int]) { (map, transaction) =>
+      candidates.finalCandidates.map(s => s -> 0).toMap: Map[SortedSet[Char], Int]) { (map, transaction) =>
       map.map { case kv@(key, value) =>
         if (key subsetOf transaction) {
           (key, value + 1)
@@ -89,6 +91,7 @@ class Apriori[A: Ordering](val dataset: Dataset[A]) {
     val filtered = counted.filter { case (_, count) => count >= threshold }
 
     AprioriStep.fromMap(
+      start = itemset,
       generateCandidatesRun = candidates,
       itemSetMap = counted,
       frequentItemSets = filtered.keys.toSeq
